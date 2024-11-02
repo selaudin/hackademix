@@ -22,7 +22,11 @@ Repository to be using for BaselHack 2024 from Hackademix team working on MDPI c
     ```bash
     pip install -r requirements.txt
     ```
-6. Run the project
+   
+### Viewing the project
+1. Running locally
     ```bash
     streamlit run welcome.py
     ```
+2. Live viewing
+*  [https://hackademix.streamlit.app/](https://hackademix.streamlit.app/) 
