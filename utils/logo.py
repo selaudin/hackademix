@@ -5,7 +5,7 @@ import base64
 from io import BytesIO
 
 def add_logo():
-    with open("assets/hackademix_logo.png", "rb") as f:
+    with open("assets/HackademixLogo.png", "rb") as f:
         image_data = f.read()
     # Resize the image
     image = Image.open(BytesIO(image_data))
