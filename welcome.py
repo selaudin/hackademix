@@ -156,12 +156,12 @@ question = st.text_input("This is your personal Research Assistant", placeholder
                          disabled=False)
 
 if question:
-    st.write('HI')
+    # st.write('HI')
     if len(st.session_state.messages) == 0:
-        st.write('0')
+        # st.write('0')
         # Step 1: Get data from the database
         data = call_faiss(question)
-        st.write(data)
+        # st.write(data)
 
         # Step 2: Generate the AI response along with the original data
         spinner_placeholder = display_spinner('Generating initial response...')
