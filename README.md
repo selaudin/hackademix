@@ -11,11 +11,18 @@ Repository to be using for BaselHack 2024 from Hackademix team working on MDPI c
     ```bash
     cd hackademix
     ```
-3. Install required dependencies
+3. Copy *.example.env* to a *.env* file
+    - For Windows <br />
+      ``` copy .env.example .env```
+
+    - For Linux or macOS <br />
+      ``` cp .env.example .env```
+4. Set API_KEY to your api key in the .env file
+5. Install required dependencies
     ```bash
     pip install -r requirements.txt
     ```
-4. Run the project
+6. Run the project
     ```bash
     streamlit run welcome.py
     ```
