@@ -1,22 +1,20 @@
-import openai
-import streamlit as st
-import requests
-import xmltodict
-from utils.logo import add_logo
-from dotenv import load_dotenv
+import base64
+from io import BytesIO
 import os
 
-# Load environment variables
-load_dotenv()
+import pandas as pd
+from PIL import Image
+import streamlit as st
 
-# OpenAI API key
-openai.api_key = os.getenv("API_KEY")
+from utils.openai.functions import call_faiss, generate_ai_response_and_data, generate_ai_response_only  # , extract_data_db
+from utils.logo import add_logo
 
-# Streamlit page configuration
-st.set_page_config(page_title="HackademiX Chat", page_icon="💡", layout="wide")
+import time
 
-# Add logo to sidebar
+st.set_page_config(page_title="HackademiX", page_icon="💡", layout="wide")
+
 logo_data = add_logo()
+
 st.markdown(
     f"""
     <style>
@@ -31,84 +29,180 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Display a custom header and style
-st.markdown(
-    """
-    <div class="blue-strip"></div>
-    """,
-    unsafe_allow_html=True,
-)
+# Custom CSS
+st.markdown("""
+    <style>
+    @font-face {
+        font-family: 'MyCustomFont';
+        src: url('assets/SansBol.ttf') format('truetype'); /* Adjust the path and format according to your font files */
+    }
 
-# Initialize session state for conversation history
-if "messages" not in st.session_state:
+    /* Apply the custom font to all text */
+    body, .markdown-text-container, .css-18e3th9, h1, h2, h3, h4, h5, h6, .stButton>button, .stSelectbox, .stTextInput>div>div>input {
+        font-family: 'MyCustomFont', sans-serif;
+    }
+
+    /* Specific title color */
+    .css-10trblm.e1fqkh3o2 {
+        color: black !important; /* Set title color to black */
+    }
+
+    /* Create a blue strip at the top left */
+    .blue-strip {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 20px; /* Fixed width of 20px */
+        height: 100%;
+        background-color: #009EE3;
+        z-index: 1000; /* Ensure it stays on top */
+    }
+
+    /* Set the background color */
+    .reportview-container {
+        background: #AFD3E8;
+    }
+
+    /* Set the font color for text and headers */
+    .markdown-text-container, .css-18e3th9, h1, h2, h3, h4, h5, h6 {
+        color: #00597A !important;
+    }
+
+    /* Set the title color to black */
+    h1 {
+        color: #000000 !important; /* Ensuring title is black */
+    }
+
+    /* Style the buttons */
+    .stButton>button {
+        background-color: #A8005C;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 12px;
+    }
+
+    /* Style the selectbox */
+    .stSelectbox {
+        color: #00597A !important;
+    }
+
+    /* Style the text input */
+    .stTextInput>div>div>input {
+        color: #00597A !important;
+    }
+
+    /* Adjust spacing and padding for a better layout */
+    .stContainer {
+        padding: 2rem;
+    }
+    </style>
+    <div class="blue-strip"></div>
+    """, unsafe_allow_html=True)
+
+spinner_css = """
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.spinner {
+  margin: 0 auto;
+  border: 16px solid #f3f3f3; /* Light grey */
+  border-top: 16px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  animation: spin 2s linear infinite;
+}
+</style>
+"""
+
+
+# Display custom spinner
+def display_spinner(text):
+    st.markdown(spinner_css, unsafe_allow_html=True)
+    spinner_placeholder = st.empty()
+    spinner_placeholder.markdown(f"""
+    <div class="spinner"></div>
+    <p style="text-align: center;">{text}</p>
+    """, unsafe_allow_html=True)
+    return spinner_placeholder
+
+
+col1a, col2a, col3a = st.columns([2, 3, 2])
+
+# with col2a:
+#     #st.title('E+H Microsoft Office 365 Bot')
+#     with open("assets/hackademix_logo.png", "rb") as f:
+#         st.image(f, use_column_width=True)
+
+col01, col02, col03 = st.columns([2.5, 4, 2])
+
+with col02:
+    st.title('Research Assistant - MDPI')
+
+if 'messages' not in st.session_state:
     st.session_state.messages = []
 
-# Display ChatGPT-style conversation
-st.title("Welcome to Hackademix Chat")
+# Input area for user questions
+question = st.text_input("This is your personal Research Assistant", placeholder="Can you help me find a paper?",
+                         disabled=False)
 
-# Display conversation history
-for message in st.session_state.messages:
+if question:
+    st.write('HI')
+    if len(st.session_state.messages) == 0:
+        st.write('0')
+        # Step 1: Get data from the database
+        data = call_faiss(question)
+        st.write(data)
+
+        # Step 2: Generate the AI response along with the original data
+        spinner_placeholder = display_spinner('Generating initial response...')
+        response, original_data = generate_ai_response_and_data(data, question)
+        spinner_placeholder.empty()
+
+        # Step 3: Store context data and the first response in session state
+        st.session_state.messages.append({"role": "user", "content": f"this is context data: {original_data}"})
+        st.session_state.messages.append({"role": "user", "content": question})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+    else:
+        # For subsequent questions, use generate_ai_response_only with conversation history
+
+        # Always include the original context message at the top
+        conversation_history = f"User: {st.session_state.messages[0]['content']}\n"
+
+        # Include the last 8 messages (excluding the original context)
+        for message in st.session_state.messages[-8:]:
+            role = "User: " if message["role"] == "user" else "Assistant: "
+            conversation_history += f"{role}{message['content']}\n"
+
+        # Add the latest question to the conversation history
+        conversation_history += f"User: {question}\n"
+
+        # Generate the response
+        spinner_placeholder = display_spinner('Generating response...')
+        response = generate_ai_response_only(conversation_history, question)
+        spinner_placeholder.empty()
+
+        # Append the new question and response to session state
+        st.session_state.messages.append({"role": "user", "content": question})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+
+# Display the last 10 messages in the chat
+for message in st.session_state.messages[1:][-9:]:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# User input
-if user_input := st.chat_input("Ask me anything about scholarly publications!"):
-    # Display user message
-    st.chat_message("user").markdown(user_input)
-    st.session_state.messages.append({"role": "user", "content": user_input})
+# user ask a question
+# Approach 1
+##function to retrieve data (give both data and paper selected)
+##function which retain memory and answer next question based on previous interaction
 
-    # Display response with a loading spinner
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        with st.spinner("Thinking..."):
-            try:
-                # Extract scholarly keywords using ChatGPT-4
-                response = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are an assistant skilled in identifying scholarly keywords. "
-                                "Extract keywords that are specific, relevant to academic searches, and unique to the user's query. "
-                                "Avoid common words or overly broad terms."
-                            )
-                        },
-                        {"role": "user", "content": user_input},
-                    ],
-                )
-
-                keywords = response.choices[0].message["content"]
-                keywords = keywords.replace("\n", " ").strip()
-
-                # Query arXiv API with extracted keywords
-                arxiv_url = f"http://export.arxiv.org/api/query?search_query=all:{keywords}&start=0&max_results=3"
-                arxiv_response = requests.get(arxiv_url)
-                if arxiv_response.status_code == 200:
-                    arxiv_data = xmltodict.parse(arxiv_response.content)
-                    
-                    # Check if 'entry' exists in the parsed data
-                    if 'entry' in arxiv_data['feed']:
-                        entries = arxiv_data['feed']['entry']
-                        if not isinstance(entries, list):
-                            entries = [entries]
-
-                        # Display the first entry found
-                        entry = entries[0]
-                        link = entry['id'].replace('/abs/', '/pdf/')
-                        title = entry.get('title', 'No title available')
-                        summary = entry.get('summary', 'No summary available')
-
-                        assistant_reply = f"**Title:** {title}\n\n**Summary:** {summary}\n\n**Link to Paper:** [Read Paper]({link})"
-                    else:
-                        assistant_reply = "No results found for your query. Try using different keywords."
-                    
-                    placeholder.markdown(assistant_reply)
-                else:
-                    placeholder.markdown("Failed to retrieve data from arXiv.")
-                
-                st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
-
-            except Exception as e:
-                placeholder.markdown("An error occurred. Please try again.")
-                st.session_state.messages.append({"role": "assistant", "content": "An error occurred. Please try again."})
+##Approach 2
