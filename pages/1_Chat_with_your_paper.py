@@ -6,7 +6,7 @@ import pandas as pd
 from PIL import Image
 import streamlit as st
 
-from utils.openai.functions import read_pdf, generate_ai_response_only
+from utils.openai.functions import read_pdf, generate_ai_response_only_qa
 from utils.logo import add_logo
 
 st.set_page_config(page_title="Hackademix", page_icon="💡", layout="wide")
@@ -152,14 +152,13 @@ with col02:
     st.write("You can ask anything about the uploaded file.")
     st.write("Additionally, the Q&A bot provides a summary and key points about the file too.")
 
-# Initialize session state messages if not already set
-if 'messages' not in st.session_state:
-    st.session_state.messages = []
+if 'qa_doc_messages' not in st.session_state:
+    st.session_state.qa_doc_messages = []
 
 # Read the uploaded file and store the document text in session state
 if uploaded_file and uploaded_file.type == "application/pdf":
     document_text = read_pdf(uploaded_file)
-    st.session_state.messages = [{"role": "user", "content": f"This is context data: {document_text}"}]
+    st.session_state.qa_doc_messages = [{"role": "user", "content": f"This is context data: {document_text}"}]
     st.success("Document uploaded and ready for Q&A.")
 
 # Input area for user questions
@@ -168,44 +167,43 @@ question = st.text_input("Ask a question about the document", placeholder="Can y
 
 if question and uploaded_file:
     # If this is the first question after uploading, use the document text as context
-    if len(st.session_state.messages) == 1:  # Only the document text exists in session state
+    if len(st.session_state.qa_doc_messages) == 1:  # Only the document text exists in session state
         # Generate the initial AI response using document text as context
-        conversation_history = f"User: {st.session_state.messages[0]['content']}\n"
+        conversation_history = f"User: {st.session_state.qa_doc_messages[0]['content']}\n"
 
         # Add the question to the conversation history
         conversation_history += f"User: {question}\n"
 
         # Generate the AI response
         spinner_placeholder = display_spinner('Generating response...')
-        response = generate_ai_response_only(conversation_history, question)
+        response = generate_ai_response_only_qa(conversation_history, question)
         spinner_placeholder.empty()
 
         # Store the question and response in session state
-        st.session_state.messages.append({"role": "user", "content": question})
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.qa_doc_messages.append({"role": "user", "content": question})
+        st.session_state.qa_doc_messages.append({"role": "assistant", "content": response})
     else:
         # For subsequent questions, use the last 8 messages for context
-        conversation_history = f"User: {st.session_state.messages[0]['content']}\n"  # Always include context at index 0
+        conversation_history = f"User: {st.session_state.qa_doc_messages[0]['content']}\n"  # Always include context at index 0
 
         # Add the last 8 messages to conversation history
-        for message in st.session_state.messages[1:][-8:]:
+        for message in st.session_state.qa_doc_messages[1:][-8:]:
             role = "User: " if message["role"] == "user" else "Assistant: "
-            conversation_history += f"{role}{message['content']}\n"
+        conversation_history += f"{role}{message['content']}\n"
 
         # Add the latest question to the conversation history
         conversation_history += f"User: {question}\n"
 
         # Generate the response
         spinner_placeholder = display_spinner('Generating response...')
-        response = generate_ai_response_only(conversation_history, question)
+        response = generate_ai_response_only_qa(conversation_history, question)
         spinner_placeholder.empty()
 
         # Append the new question and response to session state
-        st.session_state.messages.append({"role": "user", "content": question})
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.qa_doc_messages.append({"role": "user", "content": question})
+        st.session_state.qa_doc_messages.append({"role": "assistant", "content": response})
 
 # Display the last 10 messages in the chat (excluding the context message at index 0)
-for message in st.session_state.messages[1:][-9:]:
+for message in st.session_state.qa_doc_messages[1:][-9:]:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-

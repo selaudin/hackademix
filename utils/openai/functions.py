@@ -38,11 +38,11 @@ def call_faiss(text: str):
     query_embedding = query_embedding.reshape(1, -1)
 
     # Search for the closest matches in the index (top 2 results)
-    distances, indices = index.search(query_embedding, 2)
+    distances, indices = index.search(query_embedding, 4)
 
     # Extract the data for the matched indices with the correct column names
     top_data = []
-    for i in range(2):  # Iterate over the top 2 indices
+    for i in range(3):  # Iterate over the top 2 indices
         matched_index = indices[0][i]
     entry = {
         'file_name': data1[matched_index].get('file_name'),
@@ -128,3 +128,23 @@ def read_pdf(uploaded_file):
     for page in doc:
         text += page.get_text()
     return text
+
+
+@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
+def generate_ai_response_only_qa(memory, question: str):  # add prompt
+    prompt = get_prompt_convo()
+    response = openai.chat.completions.create(
+        model="gpt-4o",  # Use the appropriate model name, such as "gpt-4" for OpenAI
+        messages=[
+            {"role": "system", "content": f"{prompt}"},
+            {
+                "role": "user",
+                "content": f"Context: here's the data for context {memory}. \
+                Now this is the user's question: Question: {question}"
+            }
+        ],
+    stream=False, seed=0)
+
+    # Extract the assistant's response from the first choice
+    # answer = response.choices[0].message.content
+    return response.choices[0].message.content
