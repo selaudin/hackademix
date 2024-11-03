@@ -34,13 +34,13 @@ st.markdown("""
     <style>
     @font-face {
         font-family: 'MyCustomFont';
-        src: url('assets/SansBol.ttf') format('truetype'); /* Adjust the path and format according to your font files */
+        src: url('assets/SansBol.ttf') format('truetype'); /* Use relative path for portability */
     }
 
     /* Apply the custom font to all text */
     body, .markdown-text-container, .css-18e3th9, h1, h2, h3, h4, h5, h6, .stButton>button, .stSelectbox, .stTextInput>div>div>input {
         font-family: 'MyCustomFont', sans-serif;
-    }
+    }        
 
     /* Specific title color */
     .css-10trblm.e1fqkh3o2 {
@@ -124,7 +124,6 @@ spinner_css = """
 </style>
 """
 
-
 # Display custom spinner
 def display_spinner(text):
     st.markdown(spinner_css, unsafe_allow_html=True)
@@ -135,33 +134,27 @@ def display_spinner(text):
     """, unsafe_allow_html=True)
     return spinner_placeholder
 
-
-col1a, col2a, col3a = st.columns([2, 3, 2])
-
-# with col2a:
-#     #st.title('E+H Microsoft Office 365 Bot')
-#     with open("assets/hackademix_logo.png", "rb") as f:
-#         st.image(f, use_column_width=True)
-
-col01, col02, col03 = st.columns([2.5, 4, 2])
+col01, col02, col03 = st.columns([1.5, 5, 1])
 
 with col02:
     st.title('Research Assistant - MDPI')
 
-if 'messages' not in st.session_state:
-    st.session_state.messages = []
+# Initialize separate session state for Welcome tab
+if 'messages_welcome' not in st.session_state:
+    st.session_state.messages_welcome = []
 
-# Input area for user questions
-question = st.text_input("This is your personal Research Assistant", placeholder="Can you help me find a paper?",
-                         disabled=False)
+# Input area for user questions with a unique key
+question = st.text_input(
+    "This is your personal Research Assistant",
+    placeholder="Can you help me find a paper?",
+    disabled=False,
+    key="welcome_question"
+)
 
 if question:
-    # st.write('HI')
-    if len(st.session_state.messages) == 0:
-        # st.write('0')
+    if len(st.session_state.messages_welcome) == 0:
         # Step 1: Get data from the database
         data = call_faiss(question)
-        # st.write(data)
 
         # Step 2: Generate the AI response along with the original data
         spinner_placeholder = display_spinner('Generating initial response...')
@@ -169,17 +162,17 @@ if question:
         spinner_placeholder.empty()
 
         # Step 3: Store context data and the first response in session state
-        st.session_state.messages.append({"role": "user", "content": f"this is context data: {original_data}"})
-        st.session_state.messages.append({"role": "user", "content": question})
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        # st.session_state.messages_welcome.append({"role": "user", "content": f"this is context data: {original_data}"})
+        st.session_state.messages_welcome.append({"role": "user", "content": question})
+        st.session_state.messages_welcome.append({"role": "assistant", "content": response})
     else:
         # For subsequent questions, use generate_ai_response_only with conversation history
 
         # Always include the original context message at the top
-        conversation_history = f"User: {st.session_state.messages[0]['content']}\n"
+        conversation_history = f"User: {st.session_state.messages_welcome[0]['content']}\n"
 
         # Include the last 8 messages (excluding the original context)
-        for message in st.session_state.messages[-8:]:
+        for message in st.session_state.messages_welcome[-8:]:
             role = "User: " if message["role"] == "user" else "Assistant: "
             conversation_history += f"{role}{message['content']}\n"
 
@@ -192,17 +185,10 @@ if question:
         spinner_placeholder.empty()
 
         # Append the new question and response to session state
-        st.session_state.messages.append({"role": "user", "content": question})
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.messages_welcome.append({"role": "user", "content": question})
+        st.session_state.messages_welcome.append({"role": "assistant", "content": response})
 
-# Display the last 10 messages in the chat
-for message in st.session_state.messages[1:][-9:]:
+# Display the last 10 messages in the chat for Welcome tab
+for message in st.session_state.messages_welcome[-10:]:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-
-# user ask a question
-# Approach 1
-##function to retrieve data (give both data and paper selected)
-##function which retain memory and answer next question based on previous interaction
-
-##Approach 2

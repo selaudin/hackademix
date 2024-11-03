@@ -9,7 +9,7 @@ import streamlit as st
 from utils.openai.functions import read_pdf, generate_ai_response_only
 from utils.logo import add_logo
 
-st.set_page_config(page_title="HackademiX", page_icon="💡", layout="wide")
+st.set_page_config(page_title="Hackademix", page_icon="💡", layout="wide")
 
 logo_data = add_logo()
 
@@ -141,10 +141,10 @@ col1a, col2a, col3a = st.columns([2, 3, 2])
 #     image = Image.open(r"C:\Users\i40012907\OneDrive - Endress+Hauser\Documents\venv_saad\azure_script\basel_hack_app\assets\EH_clipdrop-background-removal.png")#image = Image.open(r"/home/appuser/app/assets/your_main_page_img_here.png")
 #     st.image(image, use_column_width=True)
 
-col01, col02, col03 = st.columns([2.5, 4, 2])
+col01, col02, col03 = st.columns([1, 8, 1])
 
 with col02:
-    st.title("📝📂 Reserach Q&A with HackamedicX")
+    st.title("📝📂 Research Q&A with Hackademix")
 
     # File uploader and supported formats information
     uploaded_file = st.file_uploader("Upload a File", type=['pdf', 'doc', 'docx', 'md', 'txt'])
