@@ -189,7 +189,7 @@ if question and uploaded_file:
         # Add the last 8 messages to conversation history
         for message in st.session_state.qa_doc_messages[1:][-8:]:
             role = "User: " if message["role"] == "user" else "Assistant: "
-        conversation_history += f"{role}{message['content']}\n"
+            conversation_history += f"{role}{message['content']}\n"
 
         # Add the latest question to the conversation history
         conversation_history += f"User: {question}\n"

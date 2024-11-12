@@ -17,7 +17,6 @@ from dotenv import load_dotenv
 load_dotenv()
 openai.api_key = os.getenv("API_KEY")
 
-
 def read_faiss():
     # read json
     with open('assets/paper_vector.json', 'r') as file:
@@ -30,7 +29,8 @@ def read_faiss():
     index.add(embeddings)
     return index, data1
 
-
+''' Eye tracking application setup'''
+# find me a paper about eye tracking applications
 def call_faiss(text: str):
     index, data1 = read_faiss()  # Load FAISS index and data
     query_embedding = generate_embeddings(text)
@@ -38,19 +38,28 @@ def call_faiss(text: str):
     query_embedding = query_embedding.reshape(1, -1)
 
     # Search for the closest matches in the index (top 2 results)
-    distances, indices = index.search(query_embedding, 4)
+    distances, indices = index.search(query_embedding, 3)
+    print("Distances:", distances)
+    print("Indices:", indices)
 
     # Extract the data for the matched indices with the correct column names
+    # Extract the data for the matched indices with the correct column names
     top_data = []
-    for i in range(3):  # Iterate over the top 2 indices
+    for i in range(2):  # Iterate over the top 2 indices
         matched_index = indices[0][i]
-    entry = {
-        'file_name': data1[matched_index].get('file_name'),
-        'text': data1[matched_index].get('text')
-    }
-    top_data.append(entry)
+        
+        # Check if the index is within the bounds of data1
+        if matched_index < len(data1):
+            entry = {
+                'file_name': data1[matched_index].get('file_name'),
+                'text': data1[matched_index].get('text')
+            }
+            top_data.append(entry)
+        else:
+            print(f"Warning: Index {matched_index} is out of range for data1.")
 
     return top_data
+
 
 
 @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
